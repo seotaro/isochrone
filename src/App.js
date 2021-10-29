@@ -13,8 +13,6 @@ import mapboxgl from '!mapbox-gl'; // eslint-disable-line import/no-webpack-load
 
 mapboxgl.accessToken = 'pk.eyJ1Ijoic2VvdGFybyIsImEiOiJjazA2ZjV2ODkzbmhnM2JwMGYycmc5OTVjIn0.5k-2FWYVmr5FH7E4Uk6V0g';
 
-const marker = new mapboxgl.Marker();
-
 const DEFAULT_DURATION = 30;
 
 function App() {
@@ -22,8 +20,9 @@ function App() {
 
   const mapContainer = useRef(null);
   const map = useRef(null);
-  const [center, setCenter] = useState({ lng: 140.0, lat: 36.0 });
-  const [zoom, setZoom] = useState(12);
+
+  const [poi, setPoi] = useState({ lng: 139.75207, lat: 35.68435 });
+  const [zoom, setZoom] = useState(14);
   const [profile, setProfile] = useState('walking');
   const [duration, setDuration] = useState(DEFAULT_DURATION);
   const [isLoading, setLoading] = useState(false);
@@ -35,7 +34,7 @@ function App() {
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
       style: 'mapbox://styles/seotaro/ckvc0jbao15i214qq4vdrcwau',
-      center: center,
+      center: poi,
       zoom: zoom,
       hash: true,
     });
@@ -43,12 +42,15 @@ function App() {
     map.current.on('load', () => {
       setLoading(true);
 
-      marker
-        .setLngLat(center)
-        .addTo(map.current);
+      new mapboxgl.Marker({ color: "#225fc8", draggable: true })
+        .setLngLat(poi)
+        .addTo(map.current)
+        .on('dragend', (e) => {
+          setPoi(e.target._lngLat);
+        });
 
       (async () => {
-        const data = await getIsochrone(profile, duration, center);
+        const data = await getIsochrone(profile, duration, poi);
 
         map.current.addSource('isochrone', {
           type: 'geojson',
@@ -62,7 +64,7 @@ function App() {
             source: 'isochrone',
             layout: {},
             paint: {
-              'fill-color': '#2020ff',
+              'fill-color': '#225fc8',
               'fill-opacity': 0.5
             }
           },
@@ -72,18 +74,7 @@ function App() {
         setLoading(false);
       })();
     });
-
-    map.current.on('moveend', () => {
-      setCenter(map.current.getCenter());
-      setZoom(map.current.getZoom());
-    });
   });
-
-  useEffect(() => {
-    if (!map.current) return;
-
-    marker.setLngLat(center);
-  }, [center]);
 
   useEffect(() => {
     if (!map.current) return;
@@ -100,13 +91,13 @@ function App() {
     });
 
     (async () => {
-      const data = await getIsochrone(profile, duration, center);
+      const data = await getIsochrone(profile, duration, poi);
       source.setData(data);
 
       setLoading(false);
     })();
 
-  }, [profile, duration, center]);
+  }, [profile, duration, poi]);
 
   const onChangeProfile = (event) => {
     setProfile(event.target.value);
