@@ -1,4 +1,11 @@
 import React, { useRef, useEffect, useState } from 'react';
+import Typography from '@mui/material/Typography';
+import Radio from '@mui/material/Radio';
+import RadioGroup from '@mui/material/RadioGroup';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import FormControl from '@mui/material/FormControl';
+import Slider from '@mui/material/Slider';
+
 import mapboxgl from '!mapbox-gl'; // eslint-disable-line import/no-webpack-loader-syntax
 
 mapboxgl.accessToken = 'pk.eyJ1Ijoic2VvdGFybyIsImEiOiJjazA2ZjV2ODkzbmhnM2JwMGYycmc5OTVjIn0.5k-2FWYVmr5FH7E4Uk6V0g';
@@ -9,7 +16,7 @@ function App() {
   const mapContainer = useRef(null);
   const map = useRef(null);
   const [center, setCenter] = useState({ lng: 140.0, lat: 36.0 });
-  const [zoom, setZoom] = useState(9);
+  const [zoom, setZoom] = useState(12);
   const [profile, setProfile] = useState('walking');
   const [duration, setDuration] = useState(60);
 
@@ -21,7 +28,8 @@ function App() {
       container: mapContainer.current,
       style: 'mapbox://styles/seotaro/ckvc0jbao15i214qq4vdrcwau',
       center: center,
-      zoom: zoom
+      zoom: zoom,
+      hash: true,
     });
 
     map.current.on('load', () => {
@@ -50,10 +58,7 @@ function App() {
           },
           'poi-label'
         );
-
       })();
-
-
     });
 
     map.current.on('moveend', () => {
@@ -74,6 +79,12 @@ function App() {
     const source = map.current.getSource('isochrone');
     if (!source) return;
 
+    // 一旦、クリアする。
+    source.setData({
+      type: 'FeatureCollection',
+      features: []
+    });
+
     (async () => {
       const data = await getIsochrone(profile, duration, center);
       source.setData(data);
@@ -81,20 +92,67 @@ function App() {
 
   }, [profile, duration, center]);
 
+  const onChangeProfile = (event) => {
+    setProfile(event.target.value);
+  }
+  const onChangeDuration = (event, value) => {
+    setDuration(value);
+  }
+
   return (
     <div>
       <div ref={mapContainer} className="map-container" />
-      <Sidebar center={center} zoom={zoom} />
+      <Sidebar
+        profile={profile}
+        onChangeProfile={onChangeProfile}
+        onChangeDuration={onChangeDuration}
+      />
     </div>
   );
 }
 
 const Sidebar = (props) => {
-  const { center, zoom } = props;
+  const { profile, onChangeProfile, onChangeDuration } = props;
+
+  function valueLabelFormat(value) {
+    let label = `${value}`;
+    if (value < 60) {
+      label = `${value} min`
+    } else {
+      label = `${value / 60} h`
+    }
+    return label;
+  }
 
   return (
     <div className="sidebar">
-      Longitude: {center.lng} | Latitude: {center.lat} | Zoom: {zoom}
+      <Typography variant="h4" component="div" gutterBottom>
+        Mapbox Ishochrone sample
+      </Typography>
+      <FormControl component="fieldset">
+        <RadioGroup
+          row
+          aria-label="profile"
+          defaultValue="walking"
+          name="radio-buttons-group"
+          value={profile}
+          onChange={onChangeProfile}
+        >
+          <FormControlLabel value="walking" control={<Radio />} label="walking" />
+          <FormControlLabel value="cycling" control={<Radio />} label="cycling" />
+          <FormControlLabel value="driving" control={<Radio />} label="driving" />
+        </RadioGroup>
+      </FormControl>
+
+      <Slider
+        aria-label="duration"
+        defaultValue={30}
+        valueLabelFormat={valueLabelFormat}
+        valueLabelDisplay="auto"
+        min={1}
+        max={60}
+        onChangeCommitted={onChangeDuration}
+      />
     </div>
   );
 }
