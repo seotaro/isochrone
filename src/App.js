@@ -1,4 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
+import { makeStyles } from "@material-ui/core/styles";
+import CircularProgress from '@mui/material/CircularProgress';
+import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Radio from '@mui/material/Radio';
 import RadioGroup from '@mui/material/RadioGroup';
@@ -12,13 +15,18 @@ mapboxgl.accessToken = 'pk.eyJ1Ijoic2VvdGFybyIsImEiOiJjazA2ZjV2ODkzbmhnM2JwMGYyc
 
 const marker = new mapboxgl.Marker();
 
+const DEFAULT_DURATION = 30;
+
 function App() {
+  const classes = useStyles();
+
   const mapContainer = useRef(null);
   const map = useRef(null);
   const [center, setCenter] = useState({ lng: 140.0, lat: 36.0 });
   const [zoom, setZoom] = useState(12);
   const [profile, setProfile] = useState('walking');
-  const [duration, setDuration] = useState(60);
+  const [duration, setDuration] = useState(DEFAULT_DURATION);
+  const [isLoading, setLoading] = useState(false);
 
 
   useEffect(() => {
@@ -33,6 +41,8 @@ function App() {
     });
 
     map.current.on('load', () => {
+      setLoading(true);
+
       marker
         .setLngLat(center)
         .addTo(map.current);
@@ -58,6 +68,8 @@ function App() {
           },
           'poi-label'
         );
+
+        setLoading(false);
       })();
     });
 
@@ -79,6 +91,8 @@ function App() {
     const source = map.current.getSource('isochrone');
     if (!source) return;
 
+    setLoading(true);
+
     // 一旦、クリアする。
     source.setData({
       type: 'FeatureCollection',
@@ -88,6 +102,8 @@ function App() {
     (async () => {
       const data = await getIsochrone(profile, duration, center);
       source.setData(data);
+
+      setLoading(false);
     })();
 
   }, [profile, duration, center]);
@@ -101,7 +117,8 @@ function App() {
 
   return (
     <div>
-      <div ref={mapContainer} className="map-container" />
+      <Progress isLoading={isLoading} />
+      <div ref={mapContainer} className={classes.mapContainer} />
       <Sidebar
         profile={profile}
         onChangeProfile={onChangeProfile}
@@ -110,8 +127,23 @@ function App() {
     </div>
   );
 }
+export default App;
+
+
+const Progress = (props) => {
+  const classes = useStyles();
+  const { isLoading } = props;
+
+  return (
+    <Box className={classes.loading} sx={{ display: 'flex' }} >
+      {isLoading ? <CircularProgress /> : null}
+    </Box >
+  );
+}
 
 const Sidebar = (props) => {
+  const classes = useStyles();
+
   const { profile, onChangeProfile, onChangeDuration } = props;
 
   function valueLabelFormat(value) {
@@ -125,7 +157,7 @@ const Sidebar = (props) => {
   }
 
   return (
-    <div className="sidebar">
+    <div className={classes.sidebar}>
       <Typography variant="h4" component="div" gutterBottom>
         Mapbox Ishochrone sample
       </Typography>
@@ -146,7 +178,7 @@ const Sidebar = (props) => {
 
       <Slider
         aria-label="duration"
-        defaultValue={30}
+        defaultValue={DEFAULT_DURATION}
         valueLabelFormat={valueLabelFormat}
         valueLabelDisplay="auto"
         min={1}
@@ -167,4 +199,33 @@ const getIsochrone = (profile, duration, center) => {
     })
 }
 
-export default App;
+
+
+
+
+
+
+
+
+const useStyles = makeStyles(() => ({
+  mapContainer: {
+    height: '100vh'
+  },
+  sidebar: {
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    color: '#000',
+    padding: 12,
+    zIndex: 1,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    margin: 12,
+    borderRadius: 4,
+  },
+  loading: {
+    zIndex: 10,
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+  },
+}));
