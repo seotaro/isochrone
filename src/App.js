@@ -33,10 +33,18 @@ function App() {
 
   return (
     <div>
-      <div className="sidebar">
-        Longitude: {lng} | Latitude: {lat} | Zoom: {zoom}
-      </div>
+      <Sidebar lng={lng} lat={lat} zoom={zoom} />
       <div ref={mapContainer} className="map-container" />
+    </div>
+  );
+}
+
+const Sidebar = (props) => {
+  const { lng, lat, zoom } = props;
+
+  return (
+    <div className="sidebar">
+      Longitude: {lng} | Latitude: {lat} | Zoom: {zoom}
     </div>
   );
 }
