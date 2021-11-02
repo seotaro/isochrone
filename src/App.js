@@ -42,12 +42,15 @@ function App() {
     map.current.on('load', () => {
       setLoading(true);
 
-      new mapboxgl.Marker({ color: "#225fc8", draggable: true })
+      const marker = new mapboxgl.Marker({ color: "#225fc8", draggable: true })
         .setLngLat(poi)
         .addTo(map.current)
         .on('dragend', (e) => {
           setPoi(e.target._lngLat);
         });
+
+      const el = marker.getElement();
+      el.style.cursor = 'pointer';
 
       (async () => {
         const data = await getIsochrone(profile, duration, poi);
